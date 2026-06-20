@@ -1,20 +1,65 @@
 // src/main/index.ts
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { readdir, stat } from 'fs/promises'
-import { join } from 'path'
+import { extname, join } from 'path'
+import { pathToFileURL } from 'url'
 import { optimizer, is } from '@electron-toolkit/utils' // 剔除不稳定的 electronApp 包装
+import {
+  isSupportedAudioExtension,
+  runConversionQueue
+} from './converters/conversionQueue'
+import type {
+  AudioFileEntry,
+  ConversionRequest,
+  ConversionUpdate
+} from './converters/converterTypes'
+import {
+  loadPlaylist,
+  savePlaylist,
+  type PlaylistTrack
+} from './playlist/playlistStore'
 
-const supportedExtensions = new Set(['.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.ncm', '.kgm', '.qmc'])
+let mainWindow: BrowserWindow | null = null
 
 const ipcChannels = {
   selectAudioFiles: 'dialog:select-audio-files',
   selectImportFolder: 'dialog:select-import-folder',
-  selectOutputDirectory: 'dialog:select-output-directory'
+  importDroppedFiles: 'file:import-dropped-files',
+  selectOutputDirectory: 'dialog:select-output-directory',
+  startConversion: 'conversion:start',
+  conversionUpdate: 'conversion:update',
+  playlistLoad: 'playlist:load',
+  playlistSave: 'playlist:save',
+  outputOpen: 'output:open'
 } as const
 
-async function collectAudioFiles(directory: string): Promise<string[]> {
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+async function createAudioEntry(filePath: string): Promise<AudioFileEntry | null> {
+  const extension = extname(filePath).slice(1).toLowerCase()
+  if (!isSupportedAudioExtension(extension)) return null
+
+  const fileStat = await stat(filePath)
+  if (!fileStat.isFile() || fileStat.size <= 0) return null
+
+  return {
+    id: `audio-${fileStat.mtimeMs}-${fileStat.size}-${filePath}`,
+    name: filePath.split(/[\\/]/).pop() || filePath,
+    path: filePath,
+    extension,
+    sizeBytes: fileStat.size,
+    sizeLabel: formatSize(fileStat.size),
+    playableUrl: pathToFileURL(filePath).toString()
+  }
+}
+
+async function collectAudioFiles(directory: string): Promise<AudioFileEntry[]> {
   const entries = await readdir(directory, { withFileTypes: true })
-  const files: string[] = []
+  const files: AudioFileEntry[] = []
 
   for (const entry of entries) {
     const fullPath = join(directory, entry.name)
@@ -26,13 +71,8 @@ async function collectAudioFiles(directory: string): Promise<string[]> {
 
     if (!entry.isFile()) continue
 
-    const dotIndex = entry.name.lastIndexOf('.')
-    const extension = dotIndex >= 0 ? entry.name.slice(dotIndex).toLowerCase() : ''
-
-    if (!supportedExtensions.has(extension)) continue
-
-    const fileStat = await stat(fullPath)
-    if (fileStat.size > 0) files.push(fullPath)
+    const audioEntry = await createAudioEntry(fullPath)
+    if (audioEntry) files.push(audioEntry)
   }
 
   return files
@@ -51,7 +91,10 @@ function registerIpcHandlers(): void {
       ]
     })
 
-    return result.canceled ? [] : result.filePaths
+    if (result.canceled) return []
+
+    const entries = await Promise.all(result.filePaths.map(filePath => createAudioEntry(filePath)))
+    return entries.filter((entry): entry is AudioFileEntry => Boolean(entry))
   })
 
   ipcMain.handle(ipcChannels.selectImportFolder, async () => {
@@ -65,6 +108,11 @@ function registerIpcHandlers(): void {
     return collectAudioFiles(result.filePaths[0])
   })
 
+  ipcMain.handle(ipcChannels.importDroppedFiles, async (_event, filePaths: string[]) => {
+    const entries = await Promise.all(filePaths.map(filePath => createAudioEntry(filePath)))
+    return entries.filter((entry): entry is AudioFileEntry => Boolean(entry))
+  })
+
   ipcMain.handle(ipcChannels.selectOutputDirectory, async () => {
     const result = await dialog.showOpenDialog({
       title: '选择输出目录',
@@ -73,10 +121,31 @@ function registerIpcHandlers(): void {
 
     return result.canceled ? null : result.filePaths[0]
   })
+
+  ipcMain.handle(ipcChannels.startConversion, async (_event, request: ConversionRequest) => {
+    return runConversionQueue(request, (update: ConversionUpdate) => {
+      mainWindow?.webContents.send(ipcChannels.conversionUpdate, update)
+    })
+  })
+
+  ipcMain.handle(ipcChannels.playlistSave, async (_event, tracks: PlaylistTrack[]) => {
+    return savePlaylist(tracks)
+  })
+
+  ipcMain.handle(ipcChannels.playlistLoad, async () => {
+    return loadPlaylist()
+  })
+
+  ipcMain.handle(ipcChannels.outputOpen, async (_event, directory: string) => {
+    if (!directory) return '输出目录为空'
+
+    const result = await shell.openPath(directory)
+    return result || null
+  })
 }
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     show: false,
@@ -91,7 +160,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
