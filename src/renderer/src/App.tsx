@@ -98,6 +98,11 @@ function App(): JSX.Element {
   const progressAverage = tasks.length === 0
     ? 0
     : Math.round(tasks.reduce((sum, task) => sum + task.progress, 0) / tasks.length)
+  const statusSubtitle = isConverting
+    ? '转换引擎运行中'
+    : library.length > 0
+      ? `${library.length} 个本地资产已就绪`
+      : '拖入音频开始整理'
 
   useEffect(() => {
     const unsubscribe = window.api.onConversionUpdate((update: ConversionUpdate) => {
@@ -339,9 +344,16 @@ function App(): JSX.Element {
           <div className="brand-mark">V</div>
           <div>
             <h1>Volcanic</h1>
-            <span>Musicplayer</span>
+            <span>Studio Player</span>
           </div>
         </div>
+
+        <nav className="nav-stack">
+          <button className="nav-active">本地音乐</button>
+          <button onClick={selectFiles}>导入资产</button>
+          <button onClick={() => void startConversion(false)}>转换中心</button>
+          <button onClick={openOutputDir}>输出目录</button>
+        </nav>
 
         <section
           className={`drop-zone ${dragActive ? 'drop-zone-active' : ''}`}
@@ -355,14 +367,14 @@ function App(): JSX.Element {
         >
           <div className="drop-icon">+</div>
           <strong>拖拽或点击导入</strong>
-          <span>MP3 / WAV 可直接处理，其他格式等待 FFmpeg 接入</span>
+          <span>NCM / QMC / KGM 解包后自动输出 MP3</span>
         </section>
 
         <div className="button-stack">
           <button className="primary-button" onClick={selectFiles}>选择音频文件</button>
           <button className="secondary-button" onClick={selectFolder}>扫描文件夹</button>
-          <button className="secondary-button" onClick={loadPlaylist}>读取 playlist.json</button>
-          <button className="secondary-button" onClick={savePlaylist}>保存 playlist.json</button>
+          <button className="secondary-button" onClick={loadPlaylist}>读取播放列表</button>
+          <button className="secondary-button" onClick={savePlaylist}>保存播放列表</button>
         </div>
 
         <section className="output-panel">
@@ -378,9 +390,14 @@ function App(): JSX.Element {
       <main className="workspace">
         <header className="hero-panel">
           <div>
-            <span className="eyebrow">Local stream restoration</span>
-            <h2>转换、整理和播放都在一个工作台完成</h2>
-            <p>导入后进入异步转换队列，成功输出的 MP3 会自动追加到播放列表。</p>
+            <span className="eyebrow">Volcanic Hi-Fi Console</span>
+            <h2>本地音乐库、容器解包和播放队列</h2>
+            <p>{statusSubtitle}。转换成功后的 MP3 会自动进入播放列表。</p>
+          </div>
+          <div className="hero-art">
+            <div className="disc">
+              <span>{isPlaying ? 'ON AIR' : 'READY'}</span>
+            </div>
           </div>
           <div className={`notice notice-${notice.kind}`}>{notice.text}</div>
         </header>
@@ -412,7 +429,7 @@ function App(): JSX.Element {
               <article className="queue-row" key={task.id}>
                 <div className="file-cell">
                   <strong>{task.fileName}</strong>
-                  <span>{task.sourceFormat.toUpperCase()} → MP3</span>
+                  <span>{task.sourceFormat.toUpperCase()} → MP3 · {task.outputDirectory}</span>
                 </div>
                 <div className="progress-cell">
                   <div className="progress-track">
@@ -430,8 +447,8 @@ function App(): JSX.Element {
       <aside className="playlist-panel">
         <div className="section-header">
           <div>
-            <span>Playlist</span>
-            <h3>播放列表</h3>
+          <span>Playlist</span>
+          <h3>播放列表</h3>
           </div>
           <button onClick={clearPlaylist}>清空</button>
         </div>

@@ -1,5 +1,5 @@
 import { copyFile, mkdir } from 'fs/promises'
-import { basename, extname, join, parse } from 'path'
+import { basename, join, parse } from 'path'
 import type {
   AudioFileEntry,
   ConversionRequest,
@@ -8,6 +8,7 @@ import type {
   ConversionUpdate
 } from './converterTypes'
 import { convertWithFfmpeg } from './ffmpegConverter'
+import { decodePrivateContainer } from './proprietaryFormatGuard'
 import { convertWavToMp3 } from './wavToMp3'
 
 const privateContainers = new Set(['ncm', 'kgm', 'qmc'])
@@ -38,11 +39,37 @@ async function runTask(task: ConversionTask, notify: (update: ConversionUpdate) 
   }
 
   if (privateContainers.has(task.sourceFormat)) {
-    setTask({
-      status: 'unsupported',
-      progress: 0,
-      message: '私有容器解包器尚未接入，已阻止伪转换'
+    setTask({ status: 'converting', progress: 3, message: '正在解包私有容器' })
+    const decoded = await decodePrivateContainer(
+      task.filePath,
+      task.fileName,
+      task.sourceFormat,
+      task.outputDirectory
+    )
+
+    setTask({ progress: 42, message: `已还原 ${decoded.detectedFormat.toUpperCase()} 音频负荷` })
+
+    if (decoded.detectedFormat === 'mp3') {
+      if (!task.outputPath) throw new Error('输出路径无效')
+      await copyFile(decoded.outputPath, task.outputPath)
+      setTask({ status: 'success', progress: 100, message: `已输出 ${basename(task.outputPath)}` })
+      return
+    }
+
+    if (decoded.detectedFormat === 'wav') {
+      if (!task.outputPath) throw new Error('输出路径无效')
+      await convertWavToMp3(decoded.outputPath, task.outputPath, progress => {
+        setTask({ progress: Math.max(45, progress), message: `正在编码 ${progress}%` })
+      })
+      setTask({ status: 'success', progress: 100, message: `已输出 ${basename(task.outputPath)}` })
+      return
+    }
+
+    if (!task.outputPath) throw new Error('输出路径无效')
+    await convertWithFfmpeg(decoded.outputPath, task.outputPath, progress => {
+      setTask({ progress: Math.max(45, progress), message: `FFmpeg 转码 ${progress}%` })
     })
+    setTask({ status: 'success', progress: 100, message: `已输出 ${basename(task.outputPath)}` })
     return
   }
 
