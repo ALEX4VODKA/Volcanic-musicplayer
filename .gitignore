@@ -1,0 +1,20 @@
+node_modules/
+out/
+dist/
+release/
+*.log
+*.tmp
+*.zip
+*.7z
+*.rar
+.DS_Store
+Thumbs.db
+
+# Local Electron and builder caches/artifacts
+electron-v*-win32-*.zip
+builder-debug.yml
+builder-effective-config.yaml
+
+# Local environment overrides
+.env
+.env.*

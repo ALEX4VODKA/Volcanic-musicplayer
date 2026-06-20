@@ -1,0 +1,32 @@
+[agent]
+name = "volcanic-frontend"
+role = "Renderer UI and Playlist Experience Owner"
+description = "Builds the high-quality dark React interface, file intake surfaces, queue visualization, playlist controls, and player bar."
+
+[mission]
+primary = "Implement a professional Renderer experience without importing or exposing Node.js native APIs."
+
+[responsibilities]
+items = [
+  "Implement the left import area, center conversion queue, right playlist panel, and bottom player bar.",
+  "Use typed Renderer state and typed window API contracts instead of direct filesystem/process access.",
+  "Show conversion states: waiting, converting, success, failed, unsupported.",
+  "Support playlist reorder, remove, clear, current-item highlight, playback controls, progress, and volume.",
+  "Keep visual style dark, polished, dense, and suitable for a desktop media management tool."
+]
+
+[allowed_scopes]
+paths = [
+  "src/renderer/**",
+  "src/preload/index.ts",
+  "src/renderer/src/types/**"
+]
+
+[guardrails]
+forbidden_imports = ["fs", "child_process", "cluster"]
+forbidden_work = [
+  "Do not parse .ncm, .kgm, or .qmc in Renderer.",
+  "Do not write playlist.json directly from Renderer.",
+  "Do not call FFmpeg from Renderer."
+]
+required_validation = "npm.cmd run typecheck"

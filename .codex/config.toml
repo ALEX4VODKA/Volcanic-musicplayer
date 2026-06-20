@@ -1,0 +1,13 @@
+[project]
+name = "Volcanic-musicplayer"
+version = "1.0.0"
+primary_language = "typescript"
+
+[meta_agents]
+system_prompt_compliance = true
+security_review_required = true
+fallback_mode = "local_algorithm"
+
+[storage]
+workspace_root = "F:/Codex-projects/Volcanic-musicplayer"
+playlist_schema = "src/renderer/src/types/playlist.d.ts"
