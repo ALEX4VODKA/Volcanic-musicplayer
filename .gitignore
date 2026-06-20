@@ -2,6 +2,7 @@ node_modules/
 out/
 dist/
 release/
+.cache/
 *.log
 *.tmp
 *.zip
@@ -18,3 +19,9 @@ builder-effective-config.yaml
 # Local environment overrides
 .env
 .env.*
+
+# Local draft agent files; canonical agent configs live in .codex/agents/
+.codex/architect.toml
+.codex/converter.toml
+.codex/frontend.toml
+.codex/parser_specialist.toml

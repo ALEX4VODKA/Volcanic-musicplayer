@@ -9,8 +9,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p src/renderer/tsconfig.json && tsc --noEmit -p src/main/tsconfig.json",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "pack": "node scripts/pack.cjs --dir",
+    "dist": "node scripts/pack.cjs"
   },
   "keywords": [
     "electron",
@@ -21,10 +21,7 @@
   ],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@types/fluent-ffmpeg": "^2.1.27",
-    "fluent-ffmpeg": "^2.1.3"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
@@ -39,5 +36,28 @@
     "react-dom": "^18.2.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.12"
+  },
+  "build": {
+    "appId": "com.volcanic.musicplayer",
+    "productName": "Volcanic Musicplayer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
   }
 }

@@ -1,22 +1,23 @@
 // src/preload/index.ts
-import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer } from 'electron'
 
-// 后续所有的流数据交互、文件选择IPC通道都将在此白名单中安全暴露
+const ipcChannels = {
+  selectAudioFiles: 'dialog:select-audio-files',
+  selectImportFolder: 'dialog:select-import-folder',
+  selectOutputDirectory: 'dialog:select-output-directory'
+} as const
+
+// 后续所有的流数据交互、文件选择 IPC 通道都必须在此白名单中逐项暴露。
 const api = {
-  // 暂时留空，供后续任务逐步安全桥接
+  selectAudioFiles: (): Promise<string[]> => ipcRenderer.invoke(ipcChannels.selectAudioFiles),
+  selectImportFolder: (): Promise<string[]> => ipcRenderer.invoke(ipcChannels.selectImportFolder),
+  selectOutputDirectory: (): Promise<string | null> => ipcRenderer.invoke(ipcChannels.selectOutputDirectory)
 }
 
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
   } catch (error) {
     console.error(error)
   }
-} else {
-  // @ts-ignore
-  window.electron = electronAPI
-  // @ts-ignore
-  window.api = api
 }

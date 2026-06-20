@@ -1,8 +1,27 @@
 // src/renderer/src/App.tsx
 import React, { useState } from 'react'
 
+type ConversionStatus = 'waiting' | 'converting' | 'success' | 'failed' | 'unsupported'
+
+interface ConversionItem {
+  id: string
+  name: string
+  sourceFormat: string
+  targetFormat: string
+  size: string
+  status: ConversionStatus
+  progress: number
+}
+
+interface PlaylistItem {
+  id: string
+  title: string
+  artist: string
+  duration: string
+}
+
 // --- MOCK 数据定义 ---
-const MOCK_CONVERSION_QUEUE = [
+const MOCK_CONVERSION_QUEUE: ConversionItem[] = [
   { id: '1', name: '暗号_Unrecognized.qmc3', sourceFormat: 'qmc', targetFormat: 'FLAC', size: '32.4 MB', status: 'converting', progress: 45 },
   { id: '2', name: '夜曲_Encrypted.ncm', sourceFormat: 'ncm', targetFormat: 'MP3', size: '12.1 MB', status: 'waiting', progress: 0 },
   { id: '3', name: '岁月神偷_Locked.kgm', sourceFormat: 'kgm', targetFormat: 'FLAC', size: '28.7 MB', status: 'success', progress: 100 },
@@ -11,7 +30,7 @@ const MOCK_CONVERSION_QUEUE = [
   { id: '6', name: '纯音乐_Alpha.ncm', sourceFormat: 'ncm', targetFormat: 'FLAC', size: '35.1 MB', status: 'unsupported', progress: 0 }
 ]
 
-const MOCK_PLAYLIST = [
+const MOCK_PLAYLIST: PlaylistItem[] = [
   { id: 'p1', title: '🌋 Volcanic Echoes (Remix)', artist: 'Magma Studio', duration: '04:12' },
   { id: 'p2', title: '岁月神偷 (流还原备份)', artist: '金玟岐', duration: '04:22' },
   { id: 'p3', title: '告白气球 (标准重编码)', artist: '周杰伦', duration: '03:35' },
@@ -23,7 +42,86 @@ function App(): JSX.Element {
   const [currentPlayingId, setCurrentPlayingId] = useState('p1')
   const [isPlaying, setIsPlaying] = useState(false)
   const [outputDir, setOutputDir] = useState('D:\\Music\\Volcanic-Output')
+  const [conversionQueue, setConversionQueue] = useState(MOCK_CONVERSION_QUEUE)
   const [playlist, setPlaylist] = useState(MOCK_PLAYLIST)
+  const [notice, setNotice] = useState('等待导入音频资产')
+
+  const getFileName = (filePath: string): string => filePath.split(/[\\/]/).pop() || filePath
+  const getExtension = (fileName: string): string => {
+    const dotIndex = fileName.lastIndexOf('.')
+    return dotIndex >= 0 ? fileName.slice(dotIndex + 1).toLowerCase() : 'unknown'
+  }
+  const getTitle = (fileName: string): string => fileName.replace(/\.[^.]+$/, '')
+  const isPrivateContainer = (extension: string): boolean => ['ncm', 'kgm', 'qmc'].includes(extension)
+
+  const addFilesToWorkspace = (filePaths: string[]) => {
+    if (filePaths.length === 0) {
+      setNotice('没有选择新的音频文件')
+      return
+    }
+
+    const timestamp = Date.now()
+    const newQueueItems = filePaths.map((filePath, index): ConversionItem => {
+      const fileName = getFileName(filePath)
+      const extension = getExtension(fileName)
+
+      return {
+        id: `local-${timestamp}-${index}`,
+        name: fileName,
+        sourceFormat: extension,
+        targetFormat: isPrivateContainer(extension) ? 'FLAC' : 'MP3',
+        size: '待分析',
+        status: 'waiting',
+        progress: 0
+      }
+    })
+
+    const newPlaylistItems = filePaths.map((filePath, index): PlaylistItem => {
+      const fileName = getFileName(filePath)
+
+      return {
+        id: `track-${timestamp}-${index}`,
+        title: getTitle(fileName),
+        artist: '本地导入',
+        duration: '待解析'
+      }
+    })
+
+    setConversionQueue(current => [...newQueueItems, ...current])
+    setPlaylist(current => [...current, ...newPlaylistItems])
+    setCurrentPlayingId(newPlaylistItems[0]?.id || currentPlayingId)
+    setNotice(`已导入 ${filePaths.length} 个音频资产`)
+  }
+
+  const handleSelectFiles = async () => {
+    try {
+      const filePaths = await window.api.selectAudioFiles()
+      addFilesToWorkspace(filePaths)
+    } catch {
+      setNotice('文件选择失败，请重试')
+    }
+  }
+
+  const handleSelectImportFolder = async () => {
+    try {
+      const filePaths = await window.api.selectImportFolder()
+      addFilesToWorkspace(filePaths)
+    } catch {
+      setNotice('文件夹扫描失败，请检查访问权限')
+    }
+  }
+
+  const handleSelectOutputDir = async () => {
+    try {
+      const selectedDir = await window.api.selectOutputDirectory()
+      if (selectedDir) {
+        setOutputDir(selectedDir)
+        setNotice('输出目录已更新')
+      }
+    } catch {
+      setNotice('输出目录选择失败，请重试')
+    }
+  }
 
   // 播放列表排序 Mock 动作
   const moveItem = (index: number, direction: 'up' | 'down') => {
@@ -42,7 +140,7 @@ function App(): JSX.Element {
   }
 
   // 状态标签渲染辅助器
-  const renderStatusBadge = (status: string, progress: number) => {
+  const renderStatusBadge = (status: ConversionStatus, progress: number) => {
     const styles: Record<string, { bg: string, color: string, text: string }> = {
       converting: { bg: 'rgba(255, 159, 67, 0.15)', color: '#ff9f43', text: `解析中 ${progress}%` },
       waiting: { bg: 'rgba(142, 142, 147, 0.15)', color: '#8e8e93', text: '等待中' },
@@ -109,7 +207,7 @@ function App(): JSX.Element {
             fontWeight: 'bold',
             cursor: 'pointer',
             transition: 'background 0.2s'
-          }} onClick={() => alert('Mock: 唤起文件夹选择器')}>更改</button>
+          }} onClick={handleSelectOutputDir}>更改</button>
         </div>
       </header>
 
@@ -128,6 +226,7 @@ function App(): JSX.Element {
           flexShrink: 0
         }}>
           <h3 style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '1px' }}>数据输入源</h3>
+          <div style={{ fontSize: '11px', color: '#706fd3', minHeight: '16px' }}>{notice}</div>
           
           {/* 拖拽盲区 Mock */}
           <div style={{
@@ -143,7 +242,7 @@ function App(): JSX.Element {
             backgroundColor: '#16161c',
             cursor: 'pointer',
             gap: '12px'
-          }} onClick={() => alert('Mock: 触发文件多选')}>
+          }} onClick={handleSelectFiles}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff4757" strokeWidth="1.5">
               <path d="M12 5v14M5 12h14" strokeLinecap="round"/>
             </svg>
@@ -163,7 +262,7 @@ function App(): JSX.Element {
             fontSize: '13px',
             fontWeight: 500,
             cursor: 'pointer'
-          }} onClick={() => alert('Mock: 触发文件夹批量扫描')}>
+          }} onClick={handleSelectImportFolder}>
             选择整个文件夹导入
           </button>
         </section>
@@ -198,7 +297,7 @@ function App(): JSX.Element {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_CONVERSION_QUEUE.map((file) => (
+                {conversionQueue.map((file) => (
                   <tr key={file.id} style={{ borderBottom: '1px solid #16161c', transition: 'background 0.2s' }}>
                     <td style={{ padding: '12px 16px', color: '#fff', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</td>
                     <td style={{ padding: '12px 16px' }}>
@@ -322,7 +421,7 @@ function App(): JSX.Element {
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {playlist.find(t => t.id === currentPlayingId)?.title || "未暂停设备"}
+              {playlist.find(t => t.id === currentPlayingId)?.title || "未选择播放项"}
             </div>
             <div style={{ fontSize: '11px', color: '#8e8e93', marginTop: '2px' }}>
               {playlist.find(t => t.id === currentPlayingId)?.artist || "无信号输入"}
