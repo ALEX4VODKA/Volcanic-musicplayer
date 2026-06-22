@@ -29,11 +29,12 @@ function parseProgress(stderr: string, durationMs: number): number | null {
 export function convertWithFfmpeg(
   inputPath: string,
   outputPath: string,
+  bitrateKbps: 128 | 192 | 320,
   onProgress: (progress: number) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const command = process.env.FFMPEG_PATH || 'ffmpeg'
-    const args = ['-y', '-i', inputPath, '-vn', '-codec:a', 'libmp3lame', '-b:a', '192k', outputPath]
+    const args = ['-y', '-i', inputPath, '-vn', '-codec:a', 'libmp3lame', '-b:a', `${bitrateKbps}k`, outputPath]
     const child = spawn(command, args, { shell: false, windowsHide: true })
     let stderr = ''
     let durationMs = 0
@@ -47,7 +48,7 @@ export function convertWithFfmpeg(
 
     child.on('error', error => {
       reject(new Error(error.message.includes('ENOENT')
-        ? '未检测到 FFmpeg CLI，请安装 FFmpeg 或设置 FFMPEG_PATH'
+        ? '这个格式需要完整转码引擎。轻量版无需安装即可处理 MP3、WAV 和可识别的 NCM/QMC/KGM。'
         : error.message))
     })
 

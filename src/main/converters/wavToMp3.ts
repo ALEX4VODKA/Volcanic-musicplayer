@@ -90,11 +90,12 @@ function splitPcmChannels(pcm: Buffer, channels: number): { left: Int16Array; ri
 export async function convertWavToMp3(
   inputPath: string,
   outputPath: string,
+  bitrateKbps: 128 | 192 | 320,
   onProgress: (progress: number) => void
 ): Promise<void> {
   const wav = parseWav(await readFile(inputPath))
   const { left, right } = splitPcmChannels(wav.pcm, wav.channels)
-  const encoder = new (loadLameRuntime().Mp3Encoder)(wav.channels, wav.sampleRate, 192)
+  const encoder = new (loadLameRuntime().Mp3Encoder)(wav.channels, wav.sampleRate, bitrateKbps)
   const mp3Chunks: Buffer[] = []
   const blockSize = 1152
 

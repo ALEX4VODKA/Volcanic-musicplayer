@@ -25,9 +25,15 @@ export interface ConversionTask {
   message: string
 }
 
+export interface ConversionSettings {
+  bitrateKbps: 128 | 192 | 320
+  skipExisting: boolean
+}
+
 export interface ConversionRequest {
   files: AudioFileEntry[]
   outputDirectory: string
+  settings: ConversionSettings
 }
 
 export interface ConversionResult {

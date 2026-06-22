@@ -22,7 +22,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "lamejs": "^1.2.1"
+    "lamejs": "^1.2.1",
+    "lucide-react": "^1.21.0"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -43,7 +44,7 @@
     "appId": "com.volcanic.musicplayer",
     "productName": "Volcanic Musicplayer",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
     "files": [
       "out/**/*",
@@ -55,7 +56,7 @@
       "signAndEditExecutable": false,
       "target": [
         {
-          "target": "dir",
+          "target": "portable",
           "arch": [
             "x64"
           ]
