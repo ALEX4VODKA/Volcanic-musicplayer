@@ -1,6 +1,6 @@
 {
   "name": "volcanic-musicplayer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A high-performance media asset manager and proprietary container stream recovery tool.",
   "main": "out/main/index.js",
   "type": "commonjs",
@@ -42,7 +42,9 @@
   },
   "build": {
     "appId": "com.volcanic.musicplayer",
-    "productName": "Volcanic Musicplayer",
+    "productName": "Volcanic mvp v1.1",
+    "executableName": "Volcanic mvp v1.1",
+    "artifactName": "Volcanic mvp v1.1.${ext}",
     "directories": {
       "output": "release"
     },

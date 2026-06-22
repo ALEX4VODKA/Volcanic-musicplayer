@@ -8,7 +8,6 @@ import {
   Music2,
   Pause,
   Play,
-  Plus,
   Repeat,
   Repeat1,
   Save,
@@ -479,15 +478,15 @@ function App(): JSX.Element {
           <div className="brand-mark"><ScanLine size={26} /></div>
           <div>
             <h1>Volcanic</h1>
-            <span>轻量音乐整理器</span>
+            <span>music toolkit</span>
           </div>
         </div>
 
         <nav className="nav-stack">
-          <button className="nav-active"><ListMusic size={16} />我的音乐</button>
-          <button onClick={oneClickWorkflow}><FolderOpen size={16} />一键整理</button>
-          <button onClick={() => void startConversion(false)}><Disc3 size={16} />开始转换</button>
-          <button onClick={() => setMiniVisible(current => !current)}><Music2 size={16} />小窗播放</button>
+          <button className="nav-active"><ListMusic size={16} />音乐库</button>
+          <button onClick={oneClickWorkflow}><FolderOpen size={16} />整理</button>
+          <button onClick={() => void startConversion(false)}><Disc3 size={16} />转换</button>
+          <button onClick={() => setMiniVisible(current => !current)}><Music2 size={16} />小窗</button>
         </nav>
 
         <section
@@ -501,25 +500,25 @@ function App(): JSX.Element {
           onClick={selectFiles}
         >
           <div className="drop-icon"><Upload size={28} /></div>
-          <strong>拖入音乐，自动整理</strong>
-          <span>支持 MP3、WAV、NCM、QMC、KGM。无需额外安装。</span>
+          <strong>拖入音乐</strong>
+          <span>支持 MP3 / WAV / NCM / QMC / KGM</span>
         </section>
 
         <div className="button-stack">
-          <button className="primary-button" onClick={oneClickWorkflow} disabled={isConverting}><FolderOpen size={17} />一键选择文件夹并整理</button>
-          <button className="secondary-button" onClick={selectFiles}><FileAudio2 size={16} />只导入文件</button>
-          <button className="secondary-button" onClick={selectFolder}><FolderOpen size={16} />只扫描文件夹</button>
-          <button className="secondary-button" onClick={loadPlaylist}><ListMusic size={16} />读取播放列表</button>
-          <button className="secondary-button" onClick={savePlaylist}><Save size={16} />保存播放列表</button>
+          <button className="primary-button" onClick={oneClickWorkflow} disabled={isConverting}><FolderOpen size={17} />选择文件夹并整理</button>
+          <button className="secondary-button" onClick={selectFiles}><FileAudio2 size={16} />导入文件</button>
+          <button className="secondary-button" onClick={selectFolder}><FolderOpen size={16} />扫描文件夹</button>
+          <button className="secondary-button" onClick={loadPlaylist}><ListMusic size={16} />读取列表</button>
+          <button className="secondary-button" onClick={savePlaylist}><Save size={16} />保存列表</button>
         </div>
       </aside>
 
       <main className="workspace">
         <header className="hero-panel">
           <div>
-            <span className="eyebrow">Simple music workflow</span>
-            <h2>把散落的音乐文件整理成可播放的 MP3</h2>
-            <p>选择文件夹后，Volcanic 会自动识别、转换、保存，并把完成的歌曲加入播放列表。</p>
+            <span className="eyebrow">local audio workflow</span>
+            <h2>整理成可播放的 MP3</h2>
+            <p>导入、转换、保存、播放，一条流程完成。</p>
           </div>
           <div className="hero-art">
             <div className="disc"><span>{isPlaying ? 'PLAYING' : 'READY'}</span></div>
@@ -528,31 +527,31 @@ function App(): JSX.Element {
         </header>
 
         <section className="metric-grid">
-          <div><span>音乐文件</span><strong>{library.length}</strong></div>
-          <div><span>等待整理</span><strong>{waitingCount}</strong></div>
+          <div><span>文件</span><strong>{library.length}</strong></div>
+          <div><span>等待</span><strong>{waitingCount}</strong></div>
           <div><span>已完成</span><strong>{completedCount}</strong></div>
-          <div><span>需要处理</span><strong>{failedCount}</strong></div>
-          <div><span>总进度</span><strong>{progressAverage}%</strong></div>
+          <div><span>异常</span><strong>{failedCount}</strong></div>
+          <div><span>进度</span><strong>{progressAverage}%</strong></div>
         </section>
 
         <section className="settings-panel">
-          <div>
-            <span>保存位置</span>
+          <div className="output-path">
+            <span>输出</span>
             <strong title={outputDir}>{outputDir}</strong>
           </div>
-          <label>
-            音质
+          <label className="quality-field">
+            <span>品质</span>
             <select value={settings.bitrateKbps} onChange={event => setSettings(current => ({ ...current, bitrateKbps: Number(event.target.value) as UserSettings['bitrateKbps'] }))}>
-              <option value={128}>省空间</option>
+              <option value={128}>轻量</option>
               <option value={192}>均衡</option>
-              <option value={320}>高音质</option>
+              <option value={320}>高质</option>
             </select>
           </label>
-          <label><input type="checkbox" checked={settings.skipExisting} onChange={event => setSettings(current => ({ ...current, skipExisting: event.target.checked }))} /> 跳过已存在</label>
-          <label><input type="checkbox" checked={settings.autoConvert} onChange={event => setSettings(current => ({ ...current, autoConvert: event.target.checked }))} /> 导入后自动整理</label>
-          <label><input type="checkbox" checked={settings.notifyOnDone} onChange={event => setSettings(current => ({ ...current, notifyOnDone: event.target.checked }))} /> 完成提示音</label>
-          <button onClick={chooseOutputDir}><HardDrive size={15} />更改位置</button>
-          <button onClick={openOutputDir}><FolderOpen size={15} />打开文件夹</button>
+          <label className="check-field"><input type="checkbox" checked={settings.skipExisting} onChange={event => setSettings(current => ({ ...current, skipExisting: event.target.checked }))} /><span>跳过</span></label>
+          <label className="check-field"><input type="checkbox" checked={settings.autoConvert} onChange={event => setSettings(current => ({ ...current, autoConvert: event.target.checked }))} /><span>自动</span></label>
+          <label className="check-field"><input type="checkbox" checked={settings.notifyOnDone} onChange={event => setSettings(current => ({ ...current, notifyOnDone: event.target.checked }))} /><span>提示</span></label>
+          <button onClick={chooseOutputDir}><HardDrive size={15} />更改</button>
+          <button onClick={openOutputDir}><FolderOpen size={15} />打开</button>
         </section>
 
         <section className="queue-panel">
@@ -573,7 +572,7 @@ function App(): JSX.Element {
               <article className="queue-row" key={task.id}>
                 <div className="file-cell">
                   <strong>{task.fileName}</strong>
-                  <span>{task.sourceFormat.toUpperCase()} 转 MP3</span>
+              <span>{task.sourceFormat.toUpperCase()} 转 MP3</span>
                 </div>
                 <div className="progress-cell">
                   <div className="progress-track"><div className={`progress-fill progress-${task.status}`} style={{ width: `${task.progress}%` }} /></div>
