@@ -148,6 +148,8 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    minWidth: 1120,
+    minHeight: 720,
     show: false,
     autoHideMenuBar: true,
     title: "Volcanic Musicplayer",

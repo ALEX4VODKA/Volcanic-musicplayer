@@ -257,12 +257,15 @@ button:disabled {
 }
 
 .hero-panel {
-  min-height: 166px;
-  padding: 24px 28px;
+  min-height: 0;
+  padding: 22px 24px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 128px 230px;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  grid-template-areas:
+    "copy art"
+    "notice notice";
   align-items: center;
-  gap: 22px;
+  gap: 16px 20px;
   border-radius: 14px;
   background:
     linear-gradient(135deg, rgba(255, 63, 87, 0.18), rgba(111, 247, 255, 0.04)),
@@ -270,27 +273,36 @@ button:disabled {
   border: 1px solid rgba(111, 247, 255, 0.13);
 }
 
+.hero-copy {
+  grid-area: copy;
+  min-width: 0;
+}
+
 .hero-panel h2 {
-  max-width: 580px;
-  font-size: 36px;
-  line-height: 1.04;
+  max-width: 520px;
+  font-size: 30px;
+  line-height: 1.18;
   font-weight: 820;
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .hero-panel p {
   max-width: 520px;
+  margin: 10px 0 0;
   color: var(--muted-2);
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
 .hero-art {
+  grid-area: art;
   display: grid;
   place-items: center;
 }
 
 .disc {
-  width: 112px;
-  height: 112px;
+  width: 104px;
+  height: 104px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -310,11 +322,13 @@ button:disabled {
 }
 
 .notice {
+  grid-area: notice;
   align-self: start;
-  padding: 11px 12px;
+  max-width: 100%;
+  padding: 10px 12px;
   border-radius: 9px;
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.45;
   color: #c7d2e5;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -327,7 +341,7 @@ button:disabled {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(92px, 1fr));
   gap: 10px;
 }
 
@@ -339,15 +353,15 @@ button:disabled {
 }
 
 .metric-grid div {
-  min-height: 84px;
-  padding: 14px 16px;
+  min-height: 72px;
+  padding: 12px 14px;
   border-radius: 12px;
 }
 
 .metric-grid strong {
   display: block;
-  margin-top: 7px;
-  font-size: 26px;
+  margin-top: 6px;
+  font-size: 24px;
 }
 
 .settings-panel {
@@ -402,9 +416,10 @@ button:disabled {
   grid-area: controls;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .settings-panel label {

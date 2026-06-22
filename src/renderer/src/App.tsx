@@ -515,7 +515,7 @@ function App(): JSX.Element {
 
       <main className="workspace">
         <header className="hero-panel">
-          <div>
+          <div className="hero-copy">
             <span className="eyebrow">local audio workflow</span>
             <h2>整理成可播放的 MP3</h2>
             <p>导入、转换、保存、播放，一条流程完成。</p>
