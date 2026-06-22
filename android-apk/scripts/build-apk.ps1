@@ -20,13 +20,17 @@ if (-not $sdkPath -or -not (Test-Path $sdkPath)) {
     throw "Android SDK not found. Set ANDROID_HOME or create android-apk\local.properties from local.properties.example."
 }
 
-$gradleCommand = Get-Command gradle -ErrorAction SilentlyContinue
 $wrapper = Join-Path $projectRoot "gradlew.bat"
+$gradleHome = if ($env:GRADLE_HOME) { $env:GRADLE_HOME } else { [Environment]::GetEnvironmentVariable("GRADLE_HOME", "User") }
+$gradleFromHome = if ($gradleHome) { Join-Path $gradleHome "bin\gradle.bat" } else { $null }
+$gradleCommand = Get-Command gradle -ErrorAction SilentlyContinue
 
 Push-Location $projectRoot
 try {
     if (Test-Path $wrapper) {
         & $wrapper assembleDebug
+    } elseif ($gradleFromHome -and (Test-Path $gradleFromHome)) {
+        & $gradleFromHome assembleDebug
     } elseif ($gradleCommand) {
         & $gradleCommand.Source assembleDebug
     } else {
