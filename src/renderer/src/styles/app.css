@@ -352,8 +352,11 @@ button:disabled {
 
 .settings-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px 62px 62px 62px 76px 76px;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "output actions"
+    "controls controls";
+  gap: 10px 12px;
   align-items: center;
   min-width: 0;
   padding: 12px 14px;
@@ -366,10 +369,12 @@ button:disabled {
 }
 
 .settings-panel .output-path {
+  grid-area: output;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   column-gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .settings-panel .output-path span {
@@ -379,10 +384,27 @@ button:disabled {
 .settings-panel .output-path strong {
   display: block;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
+}
+
+.settings-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 8px;
+  min-width: max-content;
+}
+
+.settings-controls {
+  grid-area: controls;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .settings-panel label {
@@ -399,6 +421,7 @@ button:disabled {
 
 .settings-panel .quality-field {
   justify-content: flex-start;
+  flex: 0 0 96px;
 }
 
 .settings-panel select {
@@ -425,6 +448,7 @@ button:disabled {
 
 .check-field {
   position: relative;
+  flex: 0 0 62px;
   height: 32px;
   padding: 0 6px;
   border-radius: 8px;

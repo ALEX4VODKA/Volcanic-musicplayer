@@ -539,19 +539,23 @@ function App(): JSX.Element {
             <span>输出</span>
             <strong title={outputDir}>{outputDir}</strong>
           </div>
-          <label className="quality-field">
-            <span>品质</span>
-            <select value={settings.bitrateKbps} onChange={event => setSettings(current => ({ ...current, bitrateKbps: Number(event.target.value) as UserSettings['bitrateKbps'] }))}>
-              <option value={128}>轻量</option>
-              <option value={192}>均衡</option>
-              <option value={320}>高质</option>
-            </select>
-          </label>
-          <label className="check-field"><input type="checkbox" checked={settings.skipExisting} onChange={event => setSettings(current => ({ ...current, skipExisting: event.target.checked }))} /><span>跳过</span></label>
-          <label className="check-field"><input type="checkbox" checked={settings.autoConvert} onChange={event => setSettings(current => ({ ...current, autoConvert: event.target.checked }))} /><span>自动</span></label>
-          <label className="check-field"><input type="checkbox" checked={settings.notifyOnDone} onChange={event => setSettings(current => ({ ...current, notifyOnDone: event.target.checked }))} /><span>提示</span></label>
-          <button onClick={chooseOutputDir}><HardDrive size={15} />更改</button>
-          <button onClick={openOutputDir}><FolderOpen size={15} />打开</button>
+          <div className="settings-actions">
+            <button onClick={chooseOutputDir}><HardDrive size={15} />更改</button>
+            <button onClick={openOutputDir}><FolderOpen size={15} />打开</button>
+          </div>
+          <div className="settings-controls">
+            <label className="quality-field">
+              <span>品质</span>
+              <select value={settings.bitrateKbps} onChange={event => setSettings(current => ({ ...current, bitrateKbps: Number(event.target.value) as UserSettings['bitrateKbps'] }))}>
+                <option value={128}>轻量</option>
+                <option value={192}>均衡</option>
+                <option value={320}>高质</option>
+              </select>
+            </label>
+            <label className="check-field"><input type="checkbox" checked={settings.skipExisting} onChange={event => setSettings(current => ({ ...current, skipExisting: event.target.checked }))} /><span>跳过</span></label>
+            <label className="check-field"><input type="checkbox" checked={settings.autoConvert} onChange={event => setSettings(current => ({ ...current, autoConvert: event.target.checked }))} /><span>自动</span></label>
+            <label className="check-field"><input type="checkbox" checked={settings.notifyOnDone} onChange={event => setSettings(current => ({ ...current, notifyOnDone: event.target.checked }))} /><span>提示</span></label>
+          </div>
         </section>
 
         <section className="queue-panel">
