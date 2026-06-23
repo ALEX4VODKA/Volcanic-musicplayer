@@ -4,12 +4,21 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $localProperties = Join-Path $projectRoot "local.properties"
 
 function Get-AndroidSdkPath {
-    if ($env:ANDROID_HOME) { return $env:ANDROID_HOME }
-    if ($env:ANDROID_SDK_ROOT) { return $env:ANDROID_SDK_ROOT }
+    $candidates = @(
+        $env:ANDROID_HOME,
+        $env:ANDROID_SDK_ROOT,
+        [Environment]::GetEnvironmentVariable("ANDROID_HOME", "User"),
+        [Environment]::GetEnvironmentVariable("ANDROID_SDK_ROOT", "User")
+    )
     if (Test-Path $localProperties) {
         $line = Get-Content $localProperties | Where-Object { $_ -match "^sdk\.dir=" } | Select-Object -First 1
         if ($line) {
-            return ($line -replace "^sdk\.dir=", "") -replace "\\\\", "\"
+            $candidates += (($line -replace "^sdk\.dir=", "") -replace "\\\\", "\")
+        }
+    }
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path $candidate)) {
+            return $candidate
         }
     }
     return $null
@@ -22,6 +31,10 @@ if (-not $sdkPath -or -not (Test-Path $sdkPath)) {
 
 $wrapper = Join-Path $projectRoot "gradlew.bat"
 $gradleHome = if ($env:GRADLE_HOME) { $env:GRADLE_HOME } else { [Environment]::GetEnvironmentVariable("GRADLE_HOME", "User") }
+$fallbackGradleHome = "F:\Gradle\gradle-9.6.0"
+if ((-not $gradleHome) -and (Test-Path $fallbackGradleHome)) {
+    $gradleHome = $fallbackGradleHome
+}
 $gradleFromHome = if ($gradleHome) { Join-Path $gradleHome "bin\gradle.bat" } else { $null }
 $gradleCommand = Get-Command gradle -ErrorAction SilentlyContinue
 

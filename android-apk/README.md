@@ -15,8 +15,8 @@ This folder is an isolated Android implementation for Volcanic. It does not chan
 Requirements:
 
 - JDK 17
-- Android SDK with platform 35 and build-tools installed
-- Gradle 8.x available on PATH, or a Gradle wrapper added inside this folder
+- Android SDK with platform 36 and build-tools installed
+- Gradle available on PATH, `GRADLE_HOME` configured, or `F:\Gradle\gradle-9.6.0` present
 
 Commands:
 
@@ -31,4 +31,4 @@ Output:
 android-apk\app\build\outputs\apk\debug\app-debug.apk
 ```
 
-If Android SDK is not configured globally, copy `local.properties.example` to `local.properties` and set `sdk.dir`.
+This workspace uses an isolated SDK view at `android-apk\.android-sdk` so APK work does not modify the Electron app folders. If Android SDK is not configured globally, copy `local.properties.example` to `local.properties` and set `sdk.dir`.

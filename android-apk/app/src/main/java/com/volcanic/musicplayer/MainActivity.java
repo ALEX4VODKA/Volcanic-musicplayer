@@ -2,7 +2,6 @@ package com.volcanic.musicplayer;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -15,6 +14,7 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -35,6 +35,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -57,12 +58,15 @@ public class MainActivity extends Activity {
     private int currentIndex = -1;
     private boolean prepared = false;
     private File playlistFile;
+    private File outputDir;
 
     private final int bg = Color.rgb(5, 7, 10);
     private final int panel = Color.rgb(17, 23, 32);
     private final int panelSoft = Color.rgb(23, 31, 43);
     private final int cyan = Color.rgb(111, 247, 255);
     private final int red = Color.rgb(255, 63, 87);
+    private final int green = Color.rgb(93, 242, 169);
+    private final int amber = Color.rgb(255, 199, 94);
     private final int text = Color.rgb(246, 248, 251);
     private final int muted = Color.rgb(150, 164, 190);
 
@@ -70,6 +74,11 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         playlistFile = new File(getFilesDir(), "playlist.json");
+        File musicRoot = getExternalFilesDir(Environment.DIRECTORY_MUSIC);
+        outputDir = new File(musicRoot != null ? musicRoot : getFilesDir(), "VolcanicOutput");
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+        }
         buildUi();
         loadPlaylist();
         refreshUi();
@@ -95,7 +104,7 @@ public class MainActivity extends Activity {
         if (requestCode == REQ_READ_AUDIO && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             scanMediaStore();
         } else if (requestCode == REQ_READ_AUDIO) {
-            toast("未授予音频读取权限");
+            toast("Audio permission denied");
         }
     }
 
@@ -120,11 +129,11 @@ public class MainActivity extends Activity {
         titleBlock.setPadding(dp(14), 0, 0, 0);
         header.addView(titleBlock, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         titleBlock.addView(textView("Volcanic", 24, text, Typeface.BOLD));
-        titleBlock.addView(textView("本地音乐库", 13, muted, Typeface.NORMAL));
+        titleBlock.addView(textView("Android MP3 output MVP", 13, muted, Typeface.NORMAL));
 
-        statusText = textView("等待导入音乐", 13, cyan, Typeface.BOLD);
+        statusText = textView("No tracks", 13, cyan, Typeface.BOLD);
         statusText.setGravity(Gravity.END);
-        header.addView(statusText, new LinearLayout.LayoutParams(dp(130), ViewGroup.LayoutParams.WRAP_CONTENT));
+        header.addView(statusText, new LinearLayout.LayoutParams(dp(142), ViewGroup.LayoutParams.WRAP_CONTENT));
 
         HorizontalScrollView actionScroll = new HorizontalScrollView(this);
         actionScroll.setHorizontalScrollBarEnabled(false);
@@ -134,10 +143,11 @@ public class MainActivity extends Activity {
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, dp(12), 0, dp(12));
         actionScroll.addView(actions);
-        actions.addView(actionButton("导入音频", this::openAudioPicker));
-        actions.addView(actionButton("扫描本机", v -> requestScan()));
-        actions.addView(actionButton("清空列表", v -> clearPlaylist()));
-        actions.addView(actionButton("保存列表", v -> savePlaylist()));
+        actions.addView(actionButton("Import", this::openAudioPicker));
+        actions.addView(actionButton("Scan", v -> requestScan()));
+        actions.addView(actionButton("MP3 Output", v -> processAllMp3Outputs()));
+        actions.addView(actionButton("Clear", v -> clearPlaylist()));
+        actions.addView(actionButton("Save", v -> savePlaylist()));
 
         ListView listView = new ListView(this);
         listView.setDivider(null);
@@ -155,12 +165,12 @@ public class MainActivity extends Activity {
         LinearLayout playerBar = card(LinearLayout.VERTICAL, dp(16), dp(12));
         root.addView(playerBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        nowTitle = textView("还没有播放歌曲", 17, text, Typeface.BOLD);
+        nowTitle = textView("Nothing playing", 17, text, Typeface.BOLD);
         nowTitle.setSingleLine(true);
         nowTitle.setEllipsize(TextUtils.TruncateAt.END);
         playerBar.addView(nowTitle);
 
-        nowMeta = textView("选择音频开始播放", 12, muted, Typeface.NORMAL);
+        nowMeta = textView("Tap a track. MP3 files are copied to the output folder.", 12, muted, Typeface.NORMAL);
         nowMeta.setSingleLine(true);
         nowMeta.setEllipsize(TextUtils.TruncateAt.END);
         playerBar.addView(nowMeta);
@@ -170,17 +180,18 @@ public class MainActivity extends Activity {
         controls.setPadding(0, dp(10), 0, 0);
         playerBar.addView(controls, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        controls.addView(controlButton("上一首", v -> previousTrack()));
-        playButton = controlButton("播放", v -> togglePlay());
+        controls.addView(controlButton("Prev", v -> previousTrack()));
+        playButton = controlButton("Play", v -> togglePlay());
         playButton.setBackground(round(red, dp(18), red));
         controls.addView(playButton);
-        controls.addView(controlButton("下一首", v -> nextTrack()));
+        controls.addView(controlButton("Next", v -> nextTrack()));
     }
 
     private void openAudioPicker(View ignored) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("audio/*");
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"audio/*", "application/octet-stream"});
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         startActivityForResult(intent, REQ_PICK_AUDIO);
@@ -190,25 +201,27 @@ public class MainActivity extends Activity {
         int before = tracks.size();
         if (data.getClipData() != null) {
             for (int i = 0; i < data.getClipData().getItemCount(); i++) {
-                addDocumentUri(data.getClipData().getItemAt(i).getUri(), data);
+                addDocumentUri(data.getClipData().getItemAt(i).getUri());
             }
         } else if (data.getData() != null) {
-            addDocumentUri(data.getData(), data);
+            addDocumentUri(data.getData());
         }
         if (tracks.size() > before) {
+            processAllMp3Outputs();
             savePlaylist();
             refreshUi();
-            toast("已导入 " + (tracks.size() - before) + " 首");
+            toast("Imported " + (tracks.size() - before) + " track(s)");
         }
     }
 
-    private void addDocumentUri(Uri uri, Intent grantData) {
+    private void addDocumentUri(Uri uri) {
         try {
             getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
         } catch (Exception ignored) {
             // Some providers do not expose persistable permissions.
         }
-        addTrack(new AudioTrack(displayName(uri), "导入文件", uri.toString()));
+        String name = displayName(uri);
+        addTrack(new AudioTrack(name, "Imported file", uri.toString(), extensionOf(name)));
     }
 
     private void requestScan() {
@@ -231,7 +244,7 @@ public class MainActivity extends Activity {
         String selection = MediaStore.Audio.Media.IS_MUSIC + "!=0";
         try (Cursor cursor = getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, projection, selection, null, MediaStore.Audio.Media.DATE_ADDED + " DESC")) {
             if (cursor == null) {
-                toast("没有读取到媒体库");
+                toast("No media library cursor");
                 return;
             }
             int idIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
@@ -240,15 +253,64 @@ public class MainActivity extends Activity {
             int displayIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME);
             while (cursor.moveToNext()) {
                 long id = cursor.getLong(idIndex);
-                String title = valueOr(cursor.getString(titleIndex), cursor.getString(displayIndex));
-                String artist = valueOr(cursor.getString(artistIndex), "本机音乐");
+                String display = cursor.getString(displayIndex);
+                String title = valueOr(cursor.getString(titleIndex), display);
+                String artist = valueOr(cursor.getString(artistIndex), "Local music");
                 Uri uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id);
-                addTrack(new AudioTrack(title, artist, uri.toString()));
+                addTrack(new AudioTrack(title, artist, uri.toString(), extensionOf(display)));
+            }
+        }
+        processAllMp3Outputs();
+        savePlaylist();
+        refreshUi();
+        toast("Scanned " + (tracks.size() - before) + " new track(s)");
+    }
+
+    private void processAllMp3Outputs() {
+        int ready = 0;
+        int blocked = 0;
+        for (AudioTrack track : tracks) {
+            if (ensureMp3Output(track)) {
+                ready++;
+            } else {
+                blocked++;
             }
         }
         savePlaylist();
         refreshUi();
-        toast("扫描新增 " + (tracks.size() - before) + " 首");
+        toast("MP3 ready: " + ready + ", blocked: " + blocked);
+    }
+
+    private boolean ensureMp3Output(AudioTrack track) {
+        if (track.outputPath != null && new File(track.outputPath).exists()) {
+            track.status = "MP3 output ready";
+            return true;
+        }
+        if (!"mp3".equals(track.extension)) {
+            track.status = "MP3 output blocked";
+            track.detail = "No fake conversion: Android MVP can output MP3 only when the source is already MP3.";
+            return false;
+        }
+        File target = uniqueOutputFile(track.title);
+        try (InputStream input = getContentResolver().openInputStream(Uri.parse(track.uri));
+             FileOutputStream output = new FileOutputStream(target)) {
+            if (input == null) {
+                throw new IllegalStateException("Input stream unavailable");
+            }
+            byte[] buffer = new byte[64 * 1024];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            track.outputPath = target.getAbsolutePath();
+            track.status = "MP3 output ready";
+            track.detail = target.getAbsolutePath();
+            return true;
+        } catch (Exception error) {
+            track.status = "MP3 output failed";
+            track.detail = error.getClass().getSimpleName() + ": " + valueOr(error.getMessage(), "copy failed");
+            return false;
+        }
     }
 
     private void addTrack(AudioTrack track) {
@@ -265,32 +327,85 @@ public class MainActivity extends Activity {
         AudioTrack track = tracks.get(index);
         releasePlayer();
         prepared = false;
+
+        Uri playUri = playbackUri(track);
+        if (playUri == null) {
+            track.status = "Playback blocked";
+            track.detail = "Select an MP3 source or use the desktop converter for " + track.extension.toUpperCase(Locale.ROOT);
+            refreshUi();
+            toast(track.detail);
+            return;
+        }
+
         player = new MediaPlayer();
         try {
             player.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build());
-            player.setDataSource(this, Uri.parse(track.uri));
+            player.setDataSource(this, playUri);
             player.setOnPreparedListener(mp -> {
                 prepared = true;
                 mp.start();
+                track.status = "Playing";
+                track.detail = playableLabel(track);
                 refreshUi();
             });
-            player.setOnCompletionListener(mp -> nextTrack());
+            player.setOnCompletionListener(mp -> {
+                if (currentIndex >= 0 && currentIndex < tracks.size()) {
+                    AudioTrack done = tracks.get(currentIndex);
+                    done.status = done.outputPath != null ? "MP3 output ready" : "Playback finished";
+                }
+                refreshUi();
+            });
+            player.setOnErrorListener((mp, what, extra) -> {
+                track.status = "Playback failed";
+                track.detail = "MediaPlayer error " + what + "/" + extra;
+                releasePlayer();
+                refreshUi();
+                toast(track.detail);
+                return true;
+            });
             player.prepareAsync();
             nowTitle.setText(track.title);
-            nowMeta.setText("正在加载");
+            nowMeta.setText("Loading " + playableLabel(track));
             refreshUi();
         } catch (Exception error) {
-            toast("无法播放：" + track.title);
+            track.status = "Playback failed";
+            track.detail = error.getClass().getSimpleName() + ": " + valueOr(error.getMessage(), "cannot open source");
+            toast(track.detail);
             releasePlayer();
+            refreshUi();
         }
+    }
+
+    private Uri playbackUri(AudioTrack track) {
+        if (track.outputPath != null && new File(track.outputPath).exists()) {
+            return Uri.fromFile(new File(track.outputPath));
+        }
+        if ("mp3".equals(track.extension) && ensureMp3Output(track)) {
+            return Uri.fromFile(new File(track.outputPath));
+        }
+        if (isAndroidPlayable(track.extension)) {
+            return Uri.parse(track.uri);
+        }
+        return null;
+    }
+
+    private boolean isAndroidPlayable(String extension) {
+        return "m4a".equals(extension) || "aac".equals(extension) || "ogg".equals(extension) || "wav".equals(extension) || "flac".equals(extension);
+    }
+
+    private String playableLabel(AudioTrack track) {
+        if (track.outputPath != null) {
+            return "MP3 output: " + track.outputPath;
+        }
+        return "Original source: " + track.extension.toUpperCase(Locale.ROOT);
     }
 
     private void togglePlay() {
         if (tracks.isEmpty()) {
-            toast("请先导入音乐");
+            toast("Import audio first");
             return;
         }
         if (player == null) {
@@ -357,14 +472,18 @@ public class MainActivity extends Activity {
                 object.put("title", track.title);
                 object.put("subtitle", track.subtitle);
                 object.put("uri", track.uri);
+                object.put("extension", track.extension);
+                object.put("outputPath", track.outputPath);
+                object.put("status", track.status);
+                object.put("detail", track.detail);
                 array.put(object);
             }
             try (FileOutputStream output = new FileOutputStream(playlistFile)) {
                 output.write(array.toString(2).getBytes(StandardCharsets.UTF_8));
             }
-            statusText.setText(String.format(Locale.CHINA, "%d 首", tracks.size()));
+            statusText.setText(String.format(Locale.US, "%d tracks", tracks.size()));
         } catch (Exception error) {
-            toast("保存列表失败");
+            toast("Save failed");
         }
     }
 
@@ -382,34 +501,42 @@ public class MainActivity extends Activity {
             JSONArray array = new JSONArray(buffer.toString(StandardCharsets.UTF_8.name()));
             for (int i = 0; i < array.length(); i++) {
                 JSONObject object = array.getJSONObject(i);
-                addTrack(new AudioTrack(
-                        object.optString("title", "未知音频"),
-                        object.optString("subtitle", "已保存"),
-                        object.optString("uri")
-                ));
+                AudioTrack track = new AudioTrack(
+                        object.optString("title", "Unknown audio"),
+                        object.optString("subtitle", "Saved"),
+                        object.optString("uri"),
+                        object.optString("extension", "unknown")
+                );
+                track.outputPath = object.optString("outputPath", null);
+                if (track.outputPath != null && track.outputPath.trim().isEmpty()) {
+                    track.outputPath = null;
+                }
+                track.status = object.optString("status", "Waiting");
+                track.detail = object.optString("detail", "");
+                addTrack(track);
             }
         } catch (Exception error) {
-            toast("读取列表失败");
+            toast("Load playlist failed");
         }
     }
 
     private void refreshUi() {
-        statusText.setText(tracks.isEmpty() ? "等待导入音乐" : tracks.size() + " 首");
+        statusText.setText(tracks.isEmpty() ? "No tracks" : tracks.size() + " tracks");
         if (adapter != null) {
             adapter.notifyDataSetChanged();
         }
         if (player != null && prepared) {
-            playButton.setText(player.isPlaying() ? "暂停" : "播放");
+            playButton.setText(player.isPlaying() ? "Pause" : "Play");
         } else {
-            playButton.setText("播放");
+            playButton.setText("Play");
         }
         if (currentIndex >= 0 && currentIndex < tracks.size()) {
             AudioTrack track = tracks.get(currentIndex);
             nowTitle.setText(track.title);
-            nowMeta.setText(track.subtitle);
+            nowMeta.setText(valueOr(track.detail, track.status));
         } else {
-            nowTitle.setText("还没有播放歌曲");
-            nowMeta.setText(tracks.isEmpty() ? "选择音频开始播放" : "点按列表歌曲播放");
+            nowTitle.setText("Nothing playing");
+            nowMeta.setText(tracks.isEmpty() ? "Import audio first" : "Tap a track to play");
         }
     }
 
@@ -432,7 +559,37 @@ public class MainActivity extends Activity {
         if (name == null || name.trim().isEmpty()) {
             name = uri.getLastPathSegment();
         }
-        return valueOr(name, "未知音频");
+        return valueOr(name, "Unknown audio");
+    }
+
+    private String extensionOf(String name) {
+        if (name == null) {
+            return "unknown";
+        }
+        int dot = name.lastIndexOf('.');
+        if (dot < 0 || dot == name.length() - 1) {
+            return "unknown";
+        }
+        return name.substring(dot + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private File uniqueOutputFile(String title) {
+        String base = sanitizeBaseName(title);
+        File target = new File(outputDir, base + ".mp3");
+        int counter = 2;
+        while (target.exists()) {
+            target = new File(outputDir, base + "-" + counter + ".mp3");
+            counter++;
+        }
+        return target;
+    }
+
+    private String sanitizeBaseName(String value) {
+        String cleaned = value == null ? "track" : value.replaceAll("\\.[^.]+$", "").replaceAll("[^A-Za-z0-9._-]+", "_");
+        if (cleaned.trim().isEmpty()) {
+            return "track";
+        }
+        return cleaned;
     }
 
     private String valueOr(String value, String fallback) {
@@ -530,7 +687,7 @@ public class MainActivity extends Activity {
 
             TextView index = textView(String.valueOf(position + 1), 14, position == currentIndex ? cyan : muted, Typeface.BOLD);
             index.setGravity(Gravity.CENTER);
-            row.addView(index, new LinearLayout.LayoutParams(dp(34), dp(42)));
+            row.addView(index, new LinearLayout.LayoutParams(dp(34), dp(48)));
 
             LinearLayout copy = new LinearLayout(MainActivity.this);
             copy.setOrientation(LinearLayout.VERTICAL);
@@ -542,14 +699,29 @@ public class MainActivity extends Activity {
             titleView.setEllipsize(TextUtils.TruncateAt.END);
             copy.addView(titleView);
 
-            TextView subtitleView = textView(track.subtitle, 12, muted, Typeface.NORMAL);
+            TextView subtitleView = textView(track.subtitle + " | " + track.extension.toUpperCase(Locale.ROOT), 12, muted, Typeface.NORMAL);
             subtitleView.setSingleLine(true);
             subtitleView.setEllipsize(TextUtils.TruncateAt.END);
             copy.addView(subtitleView);
 
-            TextView hint = textView("长按删除", 11, muted, Typeface.NORMAL);
+            TextView statusView = textView(track.status, 11, statusColor(track), Typeface.BOLD);
+            statusView.setSingleLine(true);
+            statusView.setEllipsize(TextUtils.TruncateAt.END);
+            copy.addView(statusView);
+
+            TextView hint = textView("long press delete", 10, muted, Typeface.NORMAL);
             row.addView(hint);
             return row;
+        }
+
+        private int statusColor(AudioTrack track) {
+            if (track.status.contains("ready") || track.status.contains("Playing")) {
+                return green;
+            }
+            if (track.status.contains("blocked") || track.status.contains("failed")) {
+                return amber;
+            }
+            return cyan;
         }
     }
 
@@ -557,11 +729,16 @@ public class MainActivity extends Activity {
         final String title;
         final String subtitle;
         final String uri;
+        final String extension;
+        String outputPath;
+        String status = "Waiting";
+        String detail = "";
 
-        AudioTrack(String title, String subtitle, String uri) {
+        AudioTrack(String title, String subtitle, String uri, String extension) {
             this.title = title;
             this.subtitle = subtitle;
             this.uri = uri;
+            this.extension = extension == null ? "unknown" : extension;
         }
     }
 }
