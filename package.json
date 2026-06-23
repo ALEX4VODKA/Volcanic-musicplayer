@@ -50,11 +50,13 @@
     },
     "files": [
       "out/**/*",
+      "build/icon.png",
       "node_modules/lamejs/**/*",
       "package.json"
     ],
     "asar": true,
     "win": {
+      "icon": "build/icon.ico",
       "signAndEditExecutable": false,
       "target": [
         {

@@ -20,6 +20,7 @@ import {
   X
 } from 'lucide-react'
 import './styles/app.css'
+import appIcon from './assets/app-icon.png'
 import type {
   AudioFileEntry,
   ConversionSettings,
@@ -475,7 +476,7 @@ function App(): JSX.Element {
 
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark"><ScanLine size={26} /></div>
+          <div className="brand-mark"><img src={appIcon} alt="" /></div>
           <div>
             <h1>Volcanic</h1>
             <span>music toolkit</span>

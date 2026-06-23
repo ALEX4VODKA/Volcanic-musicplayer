@@ -153,6 +153,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     title: "Volcanic Musicplayer",
+    icon: join(__dirname, '../../build/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,

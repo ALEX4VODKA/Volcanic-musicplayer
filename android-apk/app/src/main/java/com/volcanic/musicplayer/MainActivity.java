@@ -23,6 +23,7 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -127,9 +128,10 @@ public class MainActivity extends Activity {
         header.setGravity(Gravity.CENTER_VERTICAL);
         root.addView(header, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        TextView logo = textView("V", 22, Color.BLACK, Typeface.BOLD);
-        logo.setGravity(Gravity.CENTER);
-        logo.setBackground(round(red, dp(12), red));
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.app_icon);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        logo.setPadding(dp(2), dp(2), dp(2), dp(2));
         header.addView(logo, new LinearLayout.LayoutParams(dp(52), dp(52)));
 
         LinearLayout titleBlock = new LinearLayout(this);
