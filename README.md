@@ -1,4 +1,6 @@
 # Volcanic Musicplayer EXE
+<img width="1774" height="1174" alt="image" src="https://github.com/user-attachments/assets/5df58ccd-6be0-461d-b9c1-d066c9093b7a" />
+
 
 Volcanic Musicplayer EXE 是基于 Electron + React + TypeScript 的 Windows 桌面端音乐整理、私有媒体容器解包与播放列表管理工具。它面向本地音乐文件整理场景，提供文件夹扫描、格式识别、离线解包、输出目录管理和基础播放体验。
 
